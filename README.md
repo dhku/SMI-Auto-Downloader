@@ -1,8 +1,8 @@
 # SMI-Auto-Downloader
 
-![build](./img/build.webp)
+![title](./img/title.png)
 
-#### 자막 릴리즈시 자막을 일괄로 다운받게 해주는 프로그램 입니다.
+자막 릴리즈시 자막을 일괄로 다운받게 해주는 프로그램 입니다.
 
 
 
@@ -18,15 +18,15 @@
 
      
 
-2. 명령어를 통해 프로그램을 실행합니다.
+2. 다음 명령어를 통해 프로그램을 실행합니다.
 
    ```shell
    python3 subs.py
    ```
 
-   
+   ![build](./img/build.webp)
 
-   (Optional) Crontab을 통한 설정도 가능합니다. 
+   (Optional) Crontab을 통한 설정 (NAS 추천)
 
    ``` bash
    */30 * * * * python3 /home/user/subs.py # 예시) 30분 간격으로 실행...

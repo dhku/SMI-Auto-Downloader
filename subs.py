@@ -23,6 +23,13 @@ from bs4 import BeautifulSoup
 # python3 -m pip install 'urllib3<2.0'
 # python3 -m pip install gdown
 
+# =================================================
+# Title: SMI AUTO DOWNLOADER
+# Author: KUDONG
+# Version: 1.0
+# Url: https://github.com/dhku/SMI-Auto-Downloader
+# =================================================
+
 AnimeNO = -1
 AnimeName = "None"
 outpath = os.path.abspath('.') + "/"
