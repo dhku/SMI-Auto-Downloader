@@ -26,7 +26,7 @@ from bs4 import BeautifulSoup
 # =================================================
 # Title: SMI AUTO DOWNLOADER
 # Author: KUDONG
-# Version: 1.0
+# Version: 1.01
 # Url: https://github.com/dhku/SMI-Auto-Downloader
 # =================================================
 
@@ -146,6 +146,7 @@ def download_naver(url):
         isDownloadError = 1;
 
 def get_url_source_naver(url):
+    global isDownloadError
     try:
         while url.find("PostView.naver") == -1 and url.find("PostList.naver") == -1:
             f = request.urlopen(url)
@@ -225,6 +226,7 @@ def download_tistory(url):
         isDownloadError = 1;   
 
 def get_url_source_tistory(url):
+    global isDownloadError
     try:
         f = request.urlopen(url)
         url_info = f.info()
@@ -237,7 +239,6 @@ def get_url_source_tistory(url):
         return None;
 
 def download_blogspot(url):
-    
     global isDownloadError
     url_source = get_url_source_blogspot(url)
 
@@ -309,6 +310,7 @@ def download_blogspot(url):
         isDownloadError = 1;
 
 def get_url_source_blogspot(url):
+    global isDownloadError
     try:
         f = request.urlopen(url)
         url_info = f.info()
