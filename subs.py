@@ -9,6 +9,7 @@ from http import client
 from urllib import request
 from urllib.request import urlopen
 from urllib.parse import unquote
+from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 
 #pip install gdown
@@ -268,7 +269,9 @@ def download_tistory(url):
                         if fileName is not None:
                             fileName = fileName.encode('ISO-8859-1').decode('UTF-8');
                         else:
-                            fileName = "sub.zip"
+                            parsed_url = urlparse(each_file)
+                            fileName = os.path.basename(parsed_url.path)
+                            fileName = unquote(fileName)
 
                         print("[=] 다운로드 시작 => "+fileName)
 
@@ -363,7 +366,9 @@ def download_blogspot(url):
                 if fileName is not None:
                     fileName = fileName.encode('ISO-8859-1').decode('UTF-8');
                 else:
-                    fileName = "sub.zip"
+                    parsed_url = urlparse(each_file)
+                    fileName = os.path.basename(parsed_url.path)
+                    fileName = unquote(fileName)
 
                 print("[=] 다운로드 시작 => "+fileName)
 
