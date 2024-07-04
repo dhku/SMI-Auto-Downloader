@@ -93,7 +93,7 @@ def requestAnimeSMI(AnimeNo):
             print("[+] tistory 검출.")
             download_tistory(website)
         else:
-            print("해당 조건에 부합하는 링크가 존재하지 않습니다.")
+            print("[-] 해당 조건에 부합하는 링크가 존재하지 않습니다.")
             isDownloadError = 1;
         
         if isDownloadError == 0:
@@ -264,7 +264,12 @@ def download_tistory(url):
                         print("  Link : %s" % each_file)
                         remotefile = urlopen(each_file)
                         fileName = remotefile.headers.get_filename();
-                        fileName = fileName.encode('ISO-8859-1').decode('UTF-8');
+
+                        if fileName is not None:
+                            fileName = fileName.encode('ISO-8859-1').decode('UTF-8');
+                        else:
+                            fileName = "sub.zip"
+
                         print("[=] 다운로드 시작 => "+fileName)
 
                         path = outpath + smiDir
@@ -354,7 +359,12 @@ def download_blogspot(url):
                 print("  Link : %s" % each_file)
                 remotefile = urlopen(each_file)
                 fileName = remotefile.headers.get_filename();
-                fileName = fileName.encode('ISO-8859-1').decode('UTF-8');
+
+                if fileName is not None:
+                    fileName = fileName.encode('ISO-8859-1').decode('UTF-8');
+                else:
+                    fileName = "sub.zip"
+
                 print("[=] 다운로드 시작 => "+fileName)
 
                 path = outpath + smiDir
