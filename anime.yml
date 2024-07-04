@@ -1,23 +1,15 @@
 download_path: ""
 anime_list: '[
     {
-      "Anime":"전생슬 3기",
+      "Anime":"슬라임 3기",
       "AnimeNo":"2593"
     },
     {
-      "Anime":"블루아카이브",
-      "AnimeNo":"2664"
+      "Anime":"러시아 아랴양",
+      "AnimeNo":"2672"
     },
     {
-      "Anime":"종말트레인",
-      "AnimeNo":"2913"
-    },
-    {
-      "Anime":"유포니엄 3기",
-      "AnimeNo":"2400"
-    },
-    {
-      "Anime":"유루캠 3기",
-      "AnimeNo":"2575"
+      "Anime":"호시탄탄",
+      "AnimeNo":"2922"
     }
     ]'

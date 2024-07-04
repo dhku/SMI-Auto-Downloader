@@ -26,7 +26,7 @@ from bs4 import BeautifulSoup
 # =================================================
 # Title: SMI AUTO DOWNLOADER
 # Author: KUDONG
-# Version: 1.01
+# Version: 1.2
 # Url: https://github.com/dhku/SMI-Auto-Downloader
 # =================================================
 
@@ -94,7 +94,8 @@ def requestAnimeSMI(AnimeNo):
             download_tistory(website)
         else:
             print("해당 조건에 부합하는 링크가 존재하지 않습니다.")
-
+            isDownloadError = 1;
+        
         if isDownloadError == 0:
             text_to_file( json.dumps(k) , outpath + smiDir + "finish.txt");
             print("[+] finish.txt가 생성되었습니다.")
@@ -219,8 +220,70 @@ def download_tistory(url):
                 download(file_url, path + file_name)
                 print("[+] 파일 다운로드가 완료 되었습니다. ")
         else:
-            print("[-] Attached File not found !!")
-            isDownloadError = 1;
+            soup = BeautifulSoup(url_source, 'html.parser')
+            temps = soup.find('div',class_="tt_article_useless_p_margin contents_style")    
+            
+            links = temps.find_all("a")
+
+            file_found = 0;
+
+            p_attach = re.compile(r"(.*(googleusercontent).*)")
+            p_google = re.compile(r"(.*(https://drive.google.com/file/d/).*)")
+
+            for a in links:
+                each_file = a.attrs['href']
+                # print("href = "+each_file)
+                try:
+                    each_file = each_file.replace('&amp;','&');
+
+                    # 구글 드라이브 주소가 검출되었을때
+                    if bool(p_google.match(each_file)):
+
+                        start_index = each_file.find("/d/") + 3;
+                        end_index =  each_file.rfind("/view");
+
+                        key = each_file[start_index:end_index]
+                        each_file = "https://drive.google.com/uc?id="+key
+
+                        remotefile = urlopen(each_file)
+                        fileName = remotefile.headers.get_filename();
+                        fileName = fileName.encode('ISO-8859-1').decode('UTF-8');
+                        print("[=] 다운로드 시작 => "+fileName)
+
+                        path = outpath + smiDir
+                        if not os.path.exists(path):
+                            os.makedirs(path)
+
+                        gdown.download(each_file, path + fileName, quiet=False)
+                        isDownloaded = 1;
+                        file_found = 1;
+                        print("[+] 파일 다운로드가 완료 되었습니다. ")
+
+                    # 일반 다운로드 주소가 검출되었을때
+                    elif bool(p_attach.match(each_file)) == False:
+                        print("  Link : %s" % each_file)
+                        remotefile = urlopen(each_file)
+                        fileName = remotefile.headers.get_filename();
+                        fileName = fileName.encode('ISO-8859-1').decode('UTF-8');
+                        print("[=] 다운로드 시작 => "+fileName)
+
+                        path = outpath + smiDir
+                        if not os.path.exists(path):
+                            os.makedirs(path)
+
+                        download(each_file, path + fileName);
+                        isDownloaded = 1;
+                        file_found = 1;
+                        print("[+] 파일 다운로드가 완료 되었습니다. ")
+                    
+                except Exception as e:
+                    print("[-] Error : %s" % e)
+                    isDownloadError = 1;
+            
+            if(file_found == 0):
+                print("[-] Attached File not found !!")
+                isDownloadError = 1;
+    
     except Exception as e:
         print("[-] Error : %s" % e)
         isDownloadError = 1;   
