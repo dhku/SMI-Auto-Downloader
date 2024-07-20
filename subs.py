@@ -198,6 +198,8 @@ def download_tistory(url):
         isDownloadError = 1;
         return;
 
+    #text_to_file(get_url_source_tistory( "https://harnenim.github.io/WinPNG/Viewer.html?url=" + url), "hello.html");
+
     try:
         # find all 'attach file link'
         p_attach = re.compile(r"href=[\'\"](\S+?/attachment/.*?)[\'\"]\s*.*?/> (.*?)</", re.IGNORECASE | re.DOTALL)
