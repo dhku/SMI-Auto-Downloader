@@ -3,12 +3,15 @@ import json
 import sys
 import re
 import os
+import io
 import gdown
 import yaml
+import traceback
 from http import client
 from urllib import request
 from urllib.request import urlopen
 from urllib.parse import unquote
+from urllib.parse import quote
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 
@@ -37,6 +40,11 @@ outpath = os.path.abspath('.') + "/"
 smiDir = ""
 isDownloadError = 0
 
+p_extension = re.compile(r"^.*\.(zip|ass|smi|7z)$")
+regrex1 = re.compile(r".*(naver).*")
+regrex2 = re.compile(r".*(blogspot).*")
+regrex3 = re.compile(r".*(tistory).*")
+
 def download(url, file_name = None):
     with open(file_name, "wb") as file:  
         response = requests.get(url)              
@@ -47,12 +55,12 @@ def text_to_file(txt, file_name):
     f.write(txt)
     f.close()
 
+# 요청함수
 def requestAnimeSMI(AnimeNo):
     global smiDir,isDownloadError
 
-    regrex1 = re.compile(r".*(naver).*")
-    regrex2 = re.compile(r".*(blogspot).*")
-    regrex3 = re.compile(r".*(tistory).*")
+    print("다운경로: "+outpath)
+    print("================================================================")
 
     response = requests.get("https://api.anissia.net/anime/caption/animeNo/" + str(AnimeNo))
 
@@ -60,6 +68,36 @@ def requestAnimeSMI(AnimeNo):
 
     datas = json.loads(response.text)
     json_data = datas["data"]
+
+    _requestAnimeSMI(AnimeNo,json_data)
+
+
+def requestMultipleAnimeSMI():
+    global smiDir,isDownloadError,AnimeName,AnimeNO
+
+    with open('anime.yml', encoding='UTF8') as f:
+        global outpath
+        config = yaml.load(f, Loader=yaml.FullLoader)
+
+        animelist = json.loads(config['anime_list'])
+
+        print("다운경로: "+outpath)
+        print("================================================================")
+        
+        for k in animelist:
+            AnimeName = k['Anime']
+            AnimeNO = k['AnimeNo']
+
+            response = requests.get("https://api.anissia.net/anime/caption/animeNo/" + str(AnimeNO))
+            #print(response.status_code)
+            datas = json.loads(response.text)
+            json_data = datas["data"]
+
+            _requestAnimeSMI(AnimeNO,json_data)
+            
+
+def _requestAnimeSMI(AnimeNo,json_data):
+    global smiDir,isDownloadError
 
     for k in json_data:
 
@@ -104,19 +142,24 @@ def requestAnimeSMI(AnimeNo):
             print("[-] finish.txt가 생성되지 않았습니다.")
 
         print("================================================================")
-    
+
+
+# 내부 로직 구현
+
 def download_naver(url):
     global isDownloadError
     #URL source를 긁어옵니다.
     url_source = get_url_source_naver(url);
 
     if url_source is None:
+        isDownloadError = 1;
         return
     
     # find 't.static.blog.naver.net'
     if url_source.find("t.static.blog/mylog") == -1:
         print("\n[-] It is not a NAVER Blog")
-        sys.exit(0)
+        isDownloadError = 1;
+        return 
 
     try:
         # find 'aPostFiles'
@@ -128,21 +171,101 @@ def download_naver(url):
             data = "[" + result.replace('\\\'', '\"') + "]"
             json_data = json.loads(data)
 
-            for each_file in json_data:                	
-                print("* File : %s, Size : %s Bytes" % (each_file["encodedAttachFileName"], each_file["attachFileSize"]))
-                print("  Link : %s" % each_file["encodedAttachFileUrl"])
-                # File Download
-                print("[=] 다운로드 시작 => "+each_file["encodedAttachFileName"])
+            for each_file in json_data:       
+                try:
+                    print("* File : %s, Size : %s Bytes" % (each_file["encodedAttachFileName"], each_file["attachFileSize"]))
+                    print("  Link : %s" % each_file["encodedAttachFileUrl"])
+                    # File Download
+                    print("[=] 다운로드 시작 => "+each_file["encodedAttachFileName"])
 
-                path = outpath + smiDir
-                if not os.path.exists(path):
-                    os.makedirs(path)
+                    path = outpath + smiDir
+                    if not os.path.exists(path):
+                        os.makedirs(path)
 
-                download(each_file["encodedAttachFileUrl"], path + each_file["encodedAttachFileName"])
-                print("[+] 파일 다운로드가 완료 되었습니다. ")
+                    download(each_file["encodedAttachFileUrl"], path + each_file["encodedAttachFileName"])
+                    print("[+] 파일 다운로드가 완료 되었습니다. ")
+                except Exception as e:
+                    print("[-] Error : %s" % e)
+                    isDownloadError = 1;
         else:
-            print("[-] Attached File not found !!")
-            isDownloadError = 1;
+            soup = BeautifulSoup(url_source, 'html.parser')
+            temps = soup.find('div',class_="se-main-container")    
+
+            if(temps is None):
+                temps = soup.find('div', {'class': 'se-main-container'})
+
+            links = temps.find_all("a")
+            file_found = 0;
+
+            p_attach = re.compile(r"(.*(googleusercontent).*)")
+            p_google = re.compile(r"(.*(https://drive.google.com/file/d/).*)")
+
+            for a in links:
+                if a.get('href') == None:
+                    continue;
+                each_file = a.attrs['href']
+                # print("href = "+each_file)
+                try:
+                    each_file = each_file.replace('&amp;','&');
+
+                    # 구글 드라이브 주소가 검출되었을때
+                    if bool(p_google.match(each_file)):
+
+                        start_index = each_file.find("/d/") + 3;
+                        end_index =  each_file.rfind("/view");
+
+                        key = each_file[start_index:end_index]
+                        each_file = "https://drive.google.com/uc?id="+key
+
+                        remotefile = urlopen(each_file)
+                        fileName = remotefile.headers.get_filename();
+                        fileName = fileName.encode('ISO-8859-1').decode('UTF-8');
+
+                        if(not p_extension.match(fileName)):
+                            continue;
+
+                        print("[=] 다운로드 시작 => "+fileName)
+
+                        path = outpath + smiDir
+                        if not os.path.exists(path):
+                            os.makedirs(path)
+
+                        gdown.download(each_file, path + fileName, quiet=False)
+                        file_found = 1;
+                        print("[+] 파일 다운로드가 완료 되었습니다. ")
+
+                    # 일반 다운로드 주소가 검출되었을때
+                    elif bool(p_attach.match(each_file)) == False:
+                        print("  Link : %s" % each_file)
+                        remotefile = urlopen(each_file)
+                        fileName = remotefile.headers.get_filename();
+
+                        if fileName is not None:
+                            fileName = fileName.encode('ISO-8859-1').decode('UTF-8');
+                        else:
+                            parsed_url = urlparse(each_file)
+                            fileName = os.path.basename(parsed_url.path)
+                            fileName = unquote(fileName)
+
+                        print("[=] 다운로드 시작 => "+fileName)
+
+                        path = outpath + smiDir
+                        if not os.path.exists(path):
+                            os.makedirs(path)
+
+                        download(each_file, path + fileName);
+                        file_found = 1;
+                        print("[+] 파일 다운로드가 완료 되었습니다. ")
+                        download_progress_count += 1
+                    
+                except Exception as e:
+                    print("[-] Error : %s" % e)
+                    download_progress_count += 1
+                    isDownloadError = 1;
+            
+            if(file_found == 0):
+                print("[-] Attached File not found !!")
+                isDownloadError = 1;
     except Exception as e:
         print("[-] Error : %s" % e)
         isDownloadError = 1;
@@ -206,6 +329,7 @@ def download_tistory(url):
         result = p_attach.findall(url_source)
 
         if result:
+            
             for each_file in result:
                 file_url = each_file[0]
                 if each_file[1] == "":
@@ -222,18 +346,23 @@ def download_tistory(url):
 
                 download(file_url, path + file_name)
                 print("[+] 파일 다운로드가 완료 되었습니다. ")
+
         else:
             soup = BeautifulSoup(url_source, 'html.parser')
             temps = soup.find('div',class_="tt_article_useless_p_margin contents_style")    
-            
-            links = temps.find_all("a")
+        
+            if(temps is None):
+                temps = soup.find('div', {'class': 'contents_style'})
 
+            links = temps.find_all("a")
             file_found = 0;
 
             p_attach = re.compile(r"(.*(googleusercontent).*)")
             p_google = re.compile(r"(.*(https://drive.google.com/file/d/).*)")
 
             for a in links:
+                if a.get('href') == None:
+                    continue;
                 each_file = a.attrs['href']
                 # print("href = "+each_file)
                 try:
@@ -251,6 +380,10 @@ def download_tistory(url):
                         remotefile = urlopen(each_file)
                         fileName = remotefile.headers.get_filename();
                         fileName = fileName.encode('ISO-8859-1').decode('UTF-8');
+
+                        if(not p_extension.match(fileName)):
+                            continue;
+
                         print("[=] 다운로드 시작 => "+fileName)
 
                         path = outpath + smiDir
@@ -258,7 +391,7 @@ def download_tistory(url):
                             os.makedirs(path)
 
                         gdown.download(each_file, path + fileName, quiet=False)
-                        isDownloaded = 1;
+
                         file_found = 1;
                         print("[+] 파일 다운로드가 완료 되었습니다. ")
 
@@ -282,12 +415,13 @@ def download_tistory(url):
                             os.makedirs(path)
 
                         download(each_file, path + fileName);
-                        isDownloaded = 1;
                         file_found = 1;
                         print("[+] 파일 다운로드가 완료 되었습니다. ")
                     
                 except Exception as e:
                     print("[-] Error : %s" % e)
+                    print(traceback.format_exc())
+                    download_progress_count += 1
                     isDownloadError = 1;
             
             if(file_found == 0):
@@ -296,18 +430,30 @@ def download_tistory(url):
     
     except Exception as e:
         print("[-] Error : %s" % e)
+        print(traceback.format_exc())
         isDownloadError = 1;   
 
 def get_url_source_tistory(url):
     global isDownloadError
     try:
-        f = request.urlopen(url)
+        try:
+            f = request.urlopen(url)
+        except Exception as e:
+            # 한글 URL 검출시 quote로 감싸야됨
+            # 'ascii' codec can't encode characters in position 11-13: ordinal not in range(128) 방지
+            last_slash_index = url.rfind('/')
+            body = url[:last_slash_index]
+            query = quote(url[last_slash_index:])
+            #print("출력=> "+body + query)
+            f = request.urlopen(body + query)
+
         url_info = f.info()
         url_charset = client.HTTPMessage.get_charsets(url_info)[0]
         url_source = f.read().decode(url_charset)
         return url_source
     except Exception as e:
         print("[-] Error : %s" % e)
+        print(traceback.format_exc())
         isDownloadError = 1;
         return None;
 
@@ -348,7 +494,17 @@ def download_blogspot(url):
 
                 remotefile = urlopen(each_file)
                 fileName = remotefile.headers.get_filename();
-                fileName = fileName.encode('ISO-8859-1').decode('UTF-8');
+
+                if fileName is not None:
+                    fileName = fileName.encode('ISO-8859-1').decode('UTF-8');
+                else:
+                    parsed_url = urlparse(each_file)
+                    fileName = os.path.basename(parsed_url.path)
+                    fileName = unquote(fileName)
+
+                if(not p_extension.match(fileName)):
+                   continue;
+
                 print("[=] 다운로드 시작 => "+fileName)
 
                 path = outpath + smiDir
@@ -366,7 +522,11 @@ def download_blogspot(url):
                 fileName = remotefile.headers.get_filename();
 
                 if fileName is not None:
-                    fileName = fileName.encode('ISO-8859-1').decode('UTF-8');
+                    try:
+                        fileName = fileName.encode('ISO-8859-1').decode('UTF-8');
+                    except Exception as e:
+                        fileName = fileName.encode('UTF-8').decode('ISO-8859-1');
+                        fileName = fileName.encode('ISO-8859-1').decode('UTF-8');
                 else:
                     parsed_url = urlparse(each_file)
                     fileName = os.path.basename(parsed_url.path)
@@ -384,6 +544,8 @@ def download_blogspot(url):
             
         except Exception as e:
             print("[-] Error : %s" % e)
+            print(traceback.format_exc())
+            download_progress_count += 1
             isDownloadError = 1;
 
     if isDownloaded == 0:
@@ -392,7 +554,16 @@ def download_blogspot(url):
 def get_url_source_blogspot(url):
     global isDownloadError
     try:
-        f = request.urlopen(url)
+        try:
+            f = request.urlopen(url)
+        except Exception as e:
+            # 한글 URL 검출시 quote로 감싸야됨
+            # 'ascii' codec can't encode characters in position 11-13: ordinal not in range(128) 방지
+            last_slash_index = url.rfind('/')
+            body = url[:last_slash_index]
+            query = quote(url[last_slash_index:])
+            #print("출력=> "+body + query)
+            f = request.urlopen(body + query)
         url_info = f.info()
         url_charset = client.HTTPMessage.get_charsets(url_info)[0]
         url_source = f.read().decode(url_charset)
@@ -402,34 +573,8 @@ def get_url_source_blogspot(url):
         isDownloadError = 1;
         return None;
 
-def main():
-
-    with open('anime.yml', encoding='UTF8') as f:
-        global outpath
-        config = yaml.load(f, Loader=yaml.FullLoader)
-
-        if config['download_path'] != "":
-            outpath = config['download_path'] + "/"
-
-        print("다운경로: "+outpath)
-
-        animelist = json.loads(config['anime_list'])
-
-        print("================================================================")
-
-        for k in animelist:
-            global AnimeName,AnimeNO
-            AnimeName = k['Anime']
-            AnimeNO = k['AnimeNo']
-            requestAnimeSMI(AnimeNO);
-
-    os.system("pause")
+def run():
+    requestMultipleAnimeSMI()
 
 if __name__ == "__main__":
-    main()
-
-
-
-
-
-
+    run()
