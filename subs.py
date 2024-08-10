@@ -4,7 +4,7 @@ import sys
 import re
 import os
 import io
-import gdown
+import gdrive
 import yaml
 import traceback
 from http import client
@@ -219,20 +219,31 @@ def download_naver(url):
 
                         remotefile = urlopen(each_file)
                         fileName = remotefile.headers.get_filename();
-                        fileName = fileName.encode('ISO-8859-1').decode('UTF-8');
+
+                        if fileName is not None:
+                            fileName = fileName.encode('ISO-8859-1').decode('UTF-8');
+                        else:
+                            parsed_url = urlparse(each_file)
+                            fileName = os.path.basename(parsed_url.path)
+                            fileName = unquote(fileName)
+
+                        path = outpath + smiDir
+
+                        if fileName == "uc":
+                            fileName = gdrive.get_file_name(each_file)
 
                         if(not p_extension.match(fileName)):
                             continue;
 
-                        print("[=] 다운로드 시작 => "+fileName)
+                        print("[=] 다운로드 시작 => "+ fileName)
 
-                        path = outpath + smiDir
                         if not os.path.exists(path):
                             os.makedirs(path)
 
-                        gdown.download(each_file, path + fileName, quiet=False)
-                        file_found = 1;
+                        gdrive.download(each_file, path + fileName, quiet=False)
                         print("[+] 파일 다운로드가 완료 되었습니다. ")
+
+                        file_found = 1;
 
                     # 일반 다운로드 주소가 검출되었을때
                     elif bool(p_attach.match(each_file)) == False:
@@ -379,21 +390,31 @@ def download_tistory(url):
 
                         remotefile = urlopen(each_file)
                         fileName = remotefile.headers.get_filename();
-                        fileName = fileName.encode('ISO-8859-1').decode('UTF-8');
 
+                        if fileName is not None:
+                            fileName = fileName.encode('ISO-8859-1').decode('UTF-8');
+                        else:
+                            parsed_url = urlparse(each_file)
+                            fileName = os.path.basename(parsed_url.path)
+                            fileName = unquote(fileName)
+
+                        path = outpath + smiDir
+
+                        if fileName == "uc":
+                            fileName = gdrive.get_file_name(each_file)
+                    
                         if(not p_extension.match(fileName)):
                             continue;
 
-                        print("[=] 다운로드 시작 => "+fileName)
+                        print("[=] 다운로드 시작 => "+ fileName)
 
-                        path = outpath + smiDir
                         if not os.path.exists(path):
                             os.makedirs(path)
 
-                        gdown.download(each_file, path + fileName, quiet=False)
+                        gdrive.download(each_file, path + fileName, quiet=False)
+                        print("[+] 파일 다운로드가 완료 되었습니다. ")
 
                         file_found = 1;
-                        print("[+] 파일 다운로드가 완료 되었습니다. ")
 
                     # 일반 다운로드 주소가 검출되었을때
                     elif bool(p_attach.match(each_file)) == False:
@@ -474,6 +495,8 @@ def download_blogspot(url):
 
     p_attach = re.compile(r"(.*(googleusercontent).*)")
     p_google = re.compile(r"(.*(https://drive.google.com/file/d/).*)")
+    p_google_2 = re.compile(r"(.*(https://docs.google.com/uc).*)")
+    p_google_3 = re.compile(r"(.*(https://drive.usercontent.google.com/download).*)")
 
     isDownloaded = 0;
 
@@ -482,6 +505,16 @@ def download_blogspot(url):
         # print("href = "+each_file)
         try:
             each_file = each_file.replace('&amp;','&');
+
+            if bool(p_google_2.match(each_file)):
+                start_index = each_file.find("&id=") + 4;
+                end_index =  each_file.rfind("&confirm");
+                each_file = "https://drive.google.com/file/d/" + each_file[start_index:end_index] + "/view"
+            
+            if bool(p_google_3.match(each_file)):
+                start_index = each_file.find("?id=") + 4;
+                end_index =  each_file.rfind("&export");
+                each_file = "https://drive.google.com/file/d/" + each_file[start_index:end_index] + "/view"            
 
             # 구글 드라이브 주소가 검출되었을때
             if bool(p_google.match(each_file)):
@@ -502,18 +535,23 @@ def download_blogspot(url):
                     fileName = os.path.basename(parsed_url.path)
                     fileName = unquote(fileName)
 
-                if(not p_extension.match(fileName)):
-                   continue;
-
-                print("[=] 다운로드 시작 => "+fileName)
-
                 path = outpath + smiDir
+
+                if fileName == "uc":
+                    fileName = gdrive.get_file_name(each_file)
+
+                if(not p_extension.match(fileName)):
+                    continue;
+
+                print("[=] 다운로드 시작 => "+ fileName)
+
                 if not os.path.exists(path):
                     os.makedirs(path)
 
-                gdown.download(each_file, path + fileName, quiet=False)
-                isDownloaded = 1;
+                gdrive.download(each_file, path + fileName, quiet=False)
                 print("[+] 파일 다운로드가 완료 되었습니다. ")
+                    
+                isDownloaded = 1;
 
             # 일반 다운로드 주소가 검출되었을때
             elif bool(p_attach.match(each_file)) == False:
