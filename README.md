@@ -111,7 +111,7 @@
 
    
 
-2. Ubuntu Crontab을 이용한 방법
+2. Ubuntu에서 Crontab을 이용한 방법
 
    Linux환경에서는 Crontab을 이용하여 스케줄러를 설정하실 수 있습니다.
 
