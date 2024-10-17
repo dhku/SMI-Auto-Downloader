@@ -1,11 +1,5 @@
-download_path: ""
 anime_list: '[
-    {
-      "Anime":"최애의 아이 2기",
-      "AnimeNo":"2716"
-    },
-    {
-      "Anime":"사슴 어슬렁 어슬렁 호시탐탐",
-      "AnimeNo":"2922"
-    }
-    ]'
+
+
+  ]'
+download_path: ""

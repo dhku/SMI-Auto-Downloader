@@ -15,7 +15,6 @@ from urllib.parse import quote
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 
-#pip install gdown
 #pip install requests
 #pip install PyYAML
 #pip install beautifulsoup4
@@ -25,12 +24,11 @@ from bs4 import BeautifulSoup
 # python3 get-pip.py
 # python3 -m pip install {package name}
 # python3 -m pip install 'urllib3<2.0'
-# python3 -m pip install gdown
 
 # =================================================
 # Title: SMI AUTO DOWNLOADER
 # Author: KUDONG
-# Version: 1.3
+# Version: 1.4
 # Url: https://github.com/dhku/SMI-Auto-Downloader
 # =================================================
 
@@ -71,13 +69,15 @@ def requestAnimeSMI(AnimeNo):
 
     _requestAnimeSMI(AnimeNo,json_data)
 
-
 def requestMultipleAnimeSMI():
     global smiDir,isDownloadError,AnimeName,AnimeNO
 
     with open('anime.yml', encoding='UTF8') as f:
         global outpath
         config = yaml.load(f, Loader=yaml.FullLoader)
+
+        if config['download_path'] != "":
+            outpath = config['download_path'] + "/"
 
         animelist = json.loads(config['anime_list'])
 
