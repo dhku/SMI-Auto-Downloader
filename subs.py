@@ -267,11 +267,9 @@ def download_naver(url):
                         download(each_file, path + fileName);
                         file_found = 1;
                         print("[+] 파일 다운로드가 완료 되었습니다. ")
-                        download_progress_count += 1
                     
                 except Exception as e:
                     print("[-] Error : %s" % e)
-                    download_progress_count += 1
                     isDownloadError = 1;
             
             if(file_found == 0):
@@ -442,7 +440,6 @@ def download_tistory(url):
                 except Exception as e:
                     print("[-] Error : %s" % e)
                     print(traceback.format_exc())
-                    download_progress_count += 1
                     isDownloadError = 1;
             
             if(file_found == 0):
@@ -583,7 +580,6 @@ def download_blogspot(url):
         except Exception as e:
             print("[-] Error : %s" % e)
             print(traceback.format_exc())
-            download_progress_count += 1
             isDownloadError = 1;
 
     if isDownloaded == 0:
