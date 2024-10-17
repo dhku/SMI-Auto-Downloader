@@ -16,6 +16,8 @@
 
    * download_path 미기입시 현재 디렉토리(Default)에 저장됩니다.
 
+     * 경로 예시(시놀로지) : download_path: "/volume1/Anime/Downloads"
+     
      
 
 2. 다음 명령어를 통해 프로그램을 실행합니다.
