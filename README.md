@@ -1,6 +1,6 @@
 # SMI-Auto-Downloader
 
-![title](./img/title.png)
+![title](./img/build.webp)
 
 자막 릴리즈시 자막을 일괄로 다운받게 해주는 프로그램 입니다.
 
@@ -37,7 +37,7 @@
    python3 subs.py
    ```
 
-   ![build](./img/build.webp)
+   ![build](./img/title.png)
 
    
 
