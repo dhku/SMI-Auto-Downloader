@@ -76,7 +76,7 @@
 
    2. Github에서 받은 파일을 시놀로지에 넣습니다. 
 
-   ![build](./img/syno1.png)
+      ![build](./img/syno1.png)
 
    3. anime.yml을 열어 다운로드할 작품과 다운경로를 설정합니다.
 
@@ -96,7 +96,7 @@
 
    4. 시놀로지 제어판에서 **작업 스케줄러**를 클릭 후 **생성 -> 예약된 작업 -> 사용자 정의 스크립트**를 클릭합니다.
 
-   <img src="./img/syno3.png" alt="build" style="zoom: 67%;" />
+      <img src="./img/syno3.png" alt="build" style="zoom: 67%;" />
 
    5. 작업 편집에서 원하는 **스케줄**을 설정한후 **작업설정**에서 아래와 같은 실행명령을 추가합니다.
 
