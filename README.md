@@ -38,7 +38,7 @@
      
    * **anime.yml** 예제
 
-     ```
+     ```yaml
      download_path: ""
      anime_list: '[
          {
