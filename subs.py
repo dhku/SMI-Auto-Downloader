@@ -7,6 +7,7 @@ import io
 import gdrive
 import yaml
 import traceback
+import urllib.error
 from http import client
 from urllib import request
 from urllib.request import urlopen
@@ -28,7 +29,7 @@ from bs4 import BeautifulSoup
 # =================================================
 # Title: SMI AUTO DOWNLOADER
 # Author: KUDONG
-# Version: 1.4
+# Version: 1.5
 # Url: https://github.com/dhku/SMI-Auto-Downloader
 # =================================================
 
@@ -267,10 +268,11 @@ def download_naver(url):
                         download(each_file, path + fileName);
                         file_found = 1;
                         print("[+] 파일 다운로드가 완료 되었습니다. ")
-                    
+                        
+                except urllib.error.HTTPError as e:
+                    print("[=] 해당 URL은 스킵되었습니다. : %s" % e)                     
                 except Exception as e:
                     print("[-] Error : %s" % e)
-                    isDownloadError = 1;
             
             if(file_found == 0):
                 print("[-] Attached File not found !!")
@@ -417,6 +419,7 @@ def download_tistory(url):
                     # 일반 다운로드 주소가 검출되었을때
                     elif bool(p_attach.match(each_file)) == False:
                         print("  Link : %s" % each_file)
+
                         remotefile = urlopen(each_file)
                         fileName = remotefile.headers.get_filename();
 
@@ -436,11 +439,12 @@ def download_tistory(url):
                         download(each_file, path + fileName);
                         file_found = 1;
                         print("[+] 파일 다운로드가 완료 되었습니다. ")
-                    
+
+                except urllib.error.HTTPError as e:
+                    print("[=] 해당 URL은 스킵되었습니다. : %s" % e)
                 except Exception as e:
                     print("[-] Error : %s" % e)
                     print(traceback.format_exc())
-                    isDownloadError = 1;
             
             if(file_found == 0):
                 print("[-] Attached File not found !!")
@@ -576,11 +580,12 @@ def download_blogspot(url):
                 download(each_file, path + fileName);
                 isDownloaded = 1;
                 print("[+] 파일 다운로드가 완료 되었습니다. ")
-            
+
+        except urllib.error.HTTPError as e:
+            print("[=] 해당 URL은 스킵되었습니다. : %s" % e)            
         except Exception as e:
             print("[-] Error : %s" % e)
             print(traceback.format_exc())
-            isDownloadError = 1;
 
     if isDownloaded == 0:
         isDownloadError = 1;

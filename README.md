@@ -12,11 +12,13 @@
 
    ![config](./img/config.png)
 
-   * AnimeNo는 애니시아(https://anissia.net/anime) 애니메이션 목록에서 확인 가능합니다. 
+   * AnimeNo는 작품의 고유 번호입니다. (애니시아(https://anissia.net/anime) 애니메이션 목록에서 확인 가능합니다.)
 
-   * download_path 미기입시 현재 디렉토리(Default)에 저장됩니다.
+   * Anime는 생성될 폴더 이름입니다. (해당 작품 이름을 기입해주시면 됩니다.) 
 
-     * 경로 예시(시놀로지)
+   * download_path는 자막 다운로드 경로 입니다. 
+
+     * 경로 예시(시놀로지,리눅스)
      
        ```yaml
        download_path: "/volume1/Anime/Downloads"
@@ -28,8 +30,35 @@
        download_path: "E:\\SMI-Auto-Downloader/downloads"
        ```
      
-       
+     * 경로 미기입시 - 현재 디렉토리에 저장됩니다.
      
+       ```yaml
+       download_path: ""
+       ```
+     
+   * **anime.yml** 예제
+
+     ```
+     download_path: ""
+     anime_list: '[
+         {
+           "Anime":"애니 제목1",
+           "AnimeNo":"2593"
+         },
+         {
+           "Anime":"애니 제목2",
+           "AnimeNo":"2743"
+         },
+         {
+           "Anime":"애니 제목3",
+           "AnimeNo":"2762"
+         },
+         {
+           "Anime":"애니 제목4",
+           "AnimeNo":"2886"
+         }
+         ]'
+     ```
 
 2. 다음 명령어를 통해 프로그램을 실행합니다.
 
