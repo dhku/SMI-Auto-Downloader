@@ -39,7 +39,7 @@ outpath = os.path.abspath('.') + "/"
 smiDir = ""
 isDownloadError = 0
 
-p_extension = re.compile(r"^.*\.(zip|ass|smi|7z)$")
+p_extension = re.compile(r"^.*\.(zip|ass|smi|7z)$", re.IGNORECASE)
 regrex1 = re.compile(r".*(naver).*")
 regrex2 = re.compile(r".*(blogspot).*")
 regrex3 = re.compile(r".*(tistory).*")
