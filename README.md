@@ -1,6 +1,6 @@
 # SMI-Auto-Downloader
 
-![python]( https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=Python&logoColor=white)![Anissia](https://img.shields.io/badge/Anissia-%230064BF.svg?style=for-the-badge&logoColor=white)![YAML](https://img.shields.io/badge/YAML-%23000000.svg?style=for-the-badge&logo=yaml&logoColor=white)[![downloads](https://img.shields.io/github/downloads/dhku/SMI-Auto-Downloader/total?style=for-the-badge)](https://github.com/dhku/SMI-Auto-Downloader/releases)
+![python]( https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=Python&logoColor=white)![Anissia](https://img.shields.io/badge/Anissia-%230064BF.svg?style=for-the-badge&logoColor=white)![YAML](https://img.shields.io/badge/YAML-%23000000.svg?style=for-the-badge&logo=yaml&logoColor=white)[![downloads](https://img.shields.io/github/downloads/dhku/SMI-Auto-Downloader/total?style=for-the-badge&label=Downloads)](https://github.com/dhku/SMI-Auto-Downloader/releases)
 
 ![title](./img/build.webp)
 
