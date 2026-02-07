@@ -29,7 +29,7 @@ from bs4 import BeautifulSoup
 # =================================================
 # Title: SMI AUTO DOWNLOADER
 # Author: KUDONG
-# Version: 1.5
+# Version: 1.5.4
 # Url: https://github.com/dhku/SMI-Auto-Downloader
 # =================================================
 
@@ -132,9 +132,12 @@ def _requestAnimeSMI(AnimeNo,json_data):
         elif regrex3.match(website):
             print("[+] tistory 검출.")
             download_tistory(website)
-        else:
-            print("[-] 해당 조건에 부합하는 링크가 존재하지 않습니다.")
+        elif website == "":
+            print("[=] 자막 사이트가 검출되지 않았습니다.")
             isDownloadError = 1;
+        else:
+            print("[+] 일반 웹사이트 검출.")
+            download_website(website)
         
         if isDownloadError == 0:
             text_to_file( json.dumps(k) , outpath + smiDir + "finish.txt");
@@ -614,6 +617,113 @@ def get_url_source_blogspot(url):
         print("[-] Error : %s" % e)
         isDownloadError = 1;
         return None;
+
+def download_website(url):
+    global isDownloadError, download_progress_count, download_progress_length
+    url_source = get_url_source_website(url)
+
+    if url_source is None:
+        return
+
+    soup = BeautifulSoup(url_source, 'html.parser')
+    temps = soup.find('div')
+
+    links = temps.find_all("a")
+
+    p_google = re.compile(r"(.*(https://drive.google.com/file/d/).*)")
+    p_google_2 = re.compile(r"(.*(https://docs.google.com/uc).*)")
+    p_google_3 = re.compile(r"(.*(https://drive.usercontent.google.com/download).*)")
+
+    isDownloaded = 0;
+
+    for a in links:
+        each_file = a.attrs['href']
+        #print_log("href = "+each_file)
+        try:
+            each_file = each_file.replace('&amp;','&');
+
+            if bool(p_google_2.match(each_file)):
+                start_index = each_file.find("&id=") + 4;
+                end_index =  each_file.rfind("&confirm");
+                each_file = "https://drive.google.com/file/d/" + each_file[start_index:end_index] + "/view"
+            
+            if bool(p_google_3.match(each_file)):
+                start_index = each_file.find("?id=") + 4;
+                end_index =  each_file.rfind("&export");
+                each_file = "https://drive.google.com/file/d/" + each_file[start_index:end_index] + "/view"
+
+            # 구글 드라이브 주소가 검출되었을때
+            if bool(p_google.match(each_file)):
+
+                start_index = each_file.find("/d/") + 3;
+                end_index =  each_file.rfind("/view");
+
+                key = each_file[start_index:end_index]
+                each_file = "https://drive.google.com/uc?id="+key
+
+                remotefile = urlopen(each_file)
+                fileName = remotefile.headers.get_filename();
+
+                if fileName is not None:
+                    fileName = fileName.encode('ISO-8859-1').decode('UTF-8');
+                else:
+                    parsed_url = urlparse(each_file)
+                    fileName = os.path.basename(parsed_url.path)
+                    fileName = unquote(fileName)
+
+                path = outpath + smiDir
+
+                if fileName == "uc":
+                    fileName = gdrive.get_file_name(each_file)
+
+                #print_log(fileName);
+
+                if(not p_extension.match(fileName)):
+                    continue;
+
+                print("[=] 다운로드 시작 => "+ fileName)
+
+                if not os.path.exists(path):
+                    os.makedirs(path)
+
+                gdrive.download(each_file, path + fileName, quiet=False)
+                print("[+] 파일 다운로드가 완료 되었습니다. ")
+                    
+                isDownloaded = 1;
+
+        except urllib.error.HTTPError as e:
+            print("[=] 해당 URL은 스킵되었습니다. : %s" % e)
+        except Exception as e:
+            print("[-] Error : %s" % e)
+            print(traceback.format_exc())
+
+    if isDownloaded == 0:
+        isDownloadError = 1;
+
+def get_url_source_website(url):
+    global isDownloadError
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+    try:
+        try:
+            req = request.Request(url, headers=headers)
+            f = request.urlopen(req)
+        except Exception as e:
+            # 한글 URL 검출시 quote로 감싸야됨
+            # 'ascii' codec can't encode characters in position 11-13: ordinal not in range(128) 방지
+            last_slash_index = url.rfind('/')
+            body = url[:last_slash_index]
+            query = quote(url[last_slash_index:])
+            #print_log("출력=> "+body + query)
+            f = request.urlopen(body + query)
+        url_info = f.info()
+        url_charset = client.HTTPMessage.get_charsets(url_info)[0]
+        url_source = f.read().decode(url_charset)
+        return url_source
+    except Exception as e:
+        print("[-] Error : %s" % e)
+        isDownloadError = 1;
+        return None;
+
 
 def run():
     requestMultipleAnimeSMI()
