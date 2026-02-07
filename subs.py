@@ -4,6 +4,7 @@ import sys
 import re
 import os
 import io
+import ssl
 import gdrive
 import yaml
 import traceback
@@ -703,10 +704,11 @@ def download_website(url):
 def get_url_source_website(url):
     global isDownloadError
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+    ssl_context = ssl._create_unverified_context()
     try:
         try:
             req = request.Request(url, headers=headers)
-            f = request.urlopen(req)
+            f = request.urlopen(req, context=ssl_context)
         except Exception as e:
             # 한글 URL 검출시 quote로 감싸야됨
             # 'ascii' codec can't encode characters in position 11-13: ordinal not in range(128) 방지
