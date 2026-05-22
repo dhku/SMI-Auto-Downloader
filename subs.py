@@ -30,7 +30,7 @@ from bs4 import BeautifulSoup
 # =================================================
 # Title: SMI AUTO DOWNLOADER
 # Author: KUDONG
-# Version: 1.5.4
+# Version: 1.5.5
 # Url: https://github.com/dhku/SMI-Auto-Downloader
 # =================================================
 
@@ -49,7 +49,6 @@ p_google = re.compile(r"(.*(https://drive.google.com/file/d/).*)")
 p_google_2_1 = re.compile(r"(.*(https://docs.google.com/uc).*)")
 p_google_2_2 = re.compile(r"(.*(https://drive.google.com/uc).*)")
 p_google_3 = re.compile(r"(.*(https://drive.usercontent.google.com/download).*)")
-erulabo = re.compile(r"(.*(https://erulabo.com/file).*)")
 
 def download(url, file_name = None):
     with open(file_name, "wb") as file:  
@@ -650,7 +649,6 @@ def download_website(url):
 
     isDownloaded = 0;
     isDownloaded = find_blog_standard(temps)
-    isDownloaded = find_blog_1(temps,url)
 
     if isDownloaded == 0:
         isDownloadError = 1;
@@ -726,119 +724,7 @@ def find_blog_standard(temps):
             print("[-] Error : %s" % e)
             print(traceback.format_exc())
             return 0;
-
-def find_blog_1(temps,url):
-
-    links = temps.find_all("button", attrs={"data-file-url": True})
-
-    for a in links:
-        each_file = "https://erulabo.com" + a.attrs['data-file-url']
-        #print("data-file-url = "+each_file)
-
-        try:
-            each_file = each_file.replace('&amp;','&');
-
-            if bool(erulabo.match(each_file)):
-
-                # Step 1: 게시글 접근 → 쿠키 + CSRF 토큰
-                session = requests.Session()
-                session.headers.update(HEADERS)
-
-                resp = session.get(url, timeout=15)
-                resp.raise_for_status()
-                csrf_token = extract_csrf_token(resp.text)
-
-                token_url = each_file + "/token";
-                token_resp = session.post(
-                    token_url,
-                    json={},  # Content-Length: 2 (빈 JSON body)
-                    headers={
-                        "Accept": "*/*",
-                        "Content-Type": "application/json",
-                        "X-CSRF-TOKEN": csrf_token,
-                        "X-Requested-With": "XMLHttpRequest",
-                        "Referer": url,
-                        "Origin": "https://erulabo.com",
-                        "Sec-Fetch-Dest": "empty",
-                        "Sec-Fetch-Mode": "cors",
-                        "Sec-Fetch-Site": "same-origin",
-                    },
-                    timeout=15,
-                );
-
-                # Step 2: POST /file/{uuid}/token 으로 다운로드 URL 획득
-                data = token_resp.json();
-                download_url = data.get("download_url", ""); 
-
-                if download_url:
-                    dl_resp = session.get(download_url, allow_redirects=False, timeout=15)
-
-                    if dl_resp.status_code in (301, 302, 303, 307, 308): # Google Drive URL
-                        each_file = dl_resp.headers.get("Location", "")
-                        #print_log("Google Drive URL: " + each_file)
-                    else: # 리다이렉트 없음
-                        each_file = download_url
-
-            if bool(p_google_2_1.match(each_file)):
-                start_index = each_file.find("&id=") + 4;
-                end_index =  each_file.rfind("&confirm");
-                each_file = "https://drive.google.com/file/d/" + each_file[start_index:end_index] + "/view"
-
-            if bool(p_google_2_2.match(each_file)):
-                start_index = each_file.find("&id=") + 4;
-                end_index =  len(each_file);
-                each_file = "https://drive.google.com/file/d/" + each_file[start_index:end_index] + "/view"
-
-            if bool(p_google_3.match(each_file)):
-                start_index = each_file.find("?id=") + 4;
-                end_index =  each_file.rfind("&export");
-                each_file = "https://drive.google.com/file/d/" + each_file[start_index:end_index] + "/view"
-
-            # 구글 드라이브 주소가 검출되었을때
-            if bool(p_google.match(each_file)):
-
-                start_index = each_file.find("/d/") + 3;
-                end_index =  each_file.rfind("/view");
-
-                key = each_file[start_index:end_index]
-                each_file = "https://drive.google.com/uc?id="+key
-
-                remotefile = urlopen(each_file)
-                fileName = remotefile.headers.get_filename();
-
-                if fileName is not None:
-                    fileName = fileName.encode('ISO-8859-1').decode('UTF-8');
-                else:
-                    parsed_url = urlparse(each_file)
-                    fileName = os.path.basename(parsed_url.path)
-                    fileName = unquote(fileName)
-
-                path = outpath + smiDir
-
-                if fileName == "uc":
-                    fileName = gdrive.get_file_name(each_file)
-
-                if(not p_extension.match(fileName)):
-                    continue;
-
-                print("[=] 다운로드 시작 => "+ fileName)
-
-                if not os.path.exists(path):
-                    os.makedirs(path)
-
-                gdrive.download(each_file, path + fileName, quiet=False)
-                print("[+] 파일 다운로드가 완료 되었습니다. ")
-
-                return 1;
-    
-        except urllib.error.HTTPError as e:
-            print("[=] 해당 URL은 스킵되었습니다. : %s" % e)
-            return 0;
-        except Exception as e:
-            print("[-] Error : %s" % e)
-            print(traceback.format_exc())
-            return 0;
-
+    return 0;
 
 def get_url_source_website(url):
     global isDownloadError
