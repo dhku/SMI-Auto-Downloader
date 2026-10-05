@@ -6,7 +6,7 @@
 
 자막 릴리즈시 자막을 일괄로 다운받게 해주는 프로그램 입니다.
 
-
+[GUI Version Github (For Windows/Mac)](https://github.com/dhku/GUI-for-SMI-Auto-Downloader) 
 
 ## 사용방법 
 
