@@ -49,6 +49,11 @@ p_google = re.compile(r"(.*(https://drive.google.com/file/d/).*)")
 p_google_2_1 = re.compile(r"(.*(https://docs.google.com/uc).*)")
 p_google_2_2 = re.compile(r"(.*(https://drive.google.com/uc).*)")
 p_google_3 = re.compile(r"(.*(https://drive.usercontent.google.com/download).*)")
+p_google_drive = re.compile(r"^https?://(drive|docs)\.google\.com/", re.IGNORECASE)
+p_google_folder = re.compile(r"^https?://drive\.google\.com/drive/(?:u/\d+/)?folders/([\w-]+)", re.IGNORECASE)
+p_google_file_id = re.compile(r"^https?://(?:drive|docs)\.google\.com/.*?(?:/d/|[?&]id=)([\w-]+)", re.IGNORECASE)
+
+p_harne = re.compile(r"(.*(https://harne1.tistory.com).*)")
 
 def download(url, file_name = None):
     with open(file_name, "wb") as file:  
@@ -129,7 +134,10 @@ def _requestAnimeSMI(AnimeNo,json_data):
             print("================================================================")
             continue;
 
-        if regrex1.match(website):
+        if p_google_drive.match(website):
+            print("[+] 구글 드라이브 검출.")
+            download_google_drive(website)
+        elif regrex1.match(website):
             print("[+] naver 검출.")
             download_naver(website)
         elif regrex2.match(website):
@@ -155,6 +163,114 @@ def _requestAnimeSMI(AnimeNo,json_data):
 
 
 # 내부 로직 구현
+
+def _download_drive_file(view_url):
+    """https://drive.google.com/file/d/.../view 하나를 저장한다.
+
+    확장자가 자막/압축이 아니면 False. 저장했으면 True.
+    """
+    start_index = view_url.find("/d/") + 3
+    end_index = view_url.rfind("/view")
+    key = view_url[start_index:end_index]
+    uc_url = "https://drive.google.com/uc?id=" + key
+
+    remotefile = urlopen(uc_url)
+    file_name = remotefile.headers.get_filename()
+
+    if file_name is not None:
+        file_name = file_name.encode('ISO-8859-1').decode('UTF-8')
+    else:
+        parsed_url = urlparse(uc_url)
+        file_name = unquote(os.path.basename(parsed_url.path))
+
+    if file_name == "uc":
+        file_name = gdrive.get_file_name(uc_url)
+
+    if not p_extension.match(file_name):
+        return False
+
+    print("[=] 다운로드 시작 => " + file_name)
+
+    path = outpath + smiDir
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+    gdrive.download(uc_url, path + file_name, quiet=False)
+    print("[+] 파일 다운로드가 완료 되었습니다. ")
+    return True
+
+def _list_drive_files(folder_id, depth=0):
+    """공유 폴더(하위 폴더 포함)의 모든 파일을 (파일 ID, 파일명) 목록으로 돌려준다."""
+    res = requests.get("https://drive.google.com/embeddedfolderview?id=" + folder_id, headers=HEADERS, timeout=15)
+    res.raise_for_status()
+    soup = BeautifulSoup(res.content, 'html.parser')
+
+    files = []
+    for entry in soup.select("div.flip-entry"):
+        link = entry.find("a")
+        title = entry.select_one(".flip-entry-title")
+        if link is None or title is None:
+            continue
+        href = link.get("href", "")
+        file_name = re.sub(r'[\\/:*?"<>|]', "", title.get_text().strip())
+
+        sub_folder = p_google_folder.match(href)
+        if sub_folder:
+            if depth < 3:
+                files += _list_drive_files(sub_folder.group(1), depth + 1)
+            continue
+
+        file_id = p_google_file_id.match(href)
+        if file_id and file_name:
+            files.append((file_id.group(1), file_name))
+    return files
+
+def download_google_drive(url):
+    global isDownloadError
+    folder = p_google_folder.match(url)
+
+    if folder is None:
+        file_id = p_google_file_id.match(url)
+        if file_id is None:
+            print("[-] 구글 드라이브 파일 ID를 찾을 수 없습니다.")
+            isDownloadError = 1
+            return
+        try:
+            if not _download_drive_file("https://drive.google.com/file/d/" + file_id.group(1) + "/view"):
+                isDownloadError = 1
+        except Exception as e:
+            print("[-] Error : %s" % e)
+            print(traceback.format_exc())
+            isDownloadError = 1
+        return
+
+    try:
+        files = _list_drive_files(folder.group(1))
+    except Exception as e:
+        print("[-] 구글 드라이브 폴더를 읽을 수 없습니다. : %s" % e)
+        isDownloadError = 1
+        return
+
+    if not files:
+        print("[-] 구글 드라이브 폴더에서 파일을 찾지 못했습니다.")
+        isDownloadError = 1
+        return
+
+    path = outpath + smiDir
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+    saved_any = False
+    for file_id, file_name in files:
+        try:
+            print("[=] 다운로드 시작 => " + file_name)
+            gdrive.download("https://drive.google.com/uc?id=" + file_id, path + file_name, quiet=False)
+            print("[+] 파일 다운로드가 완료 되었습니다. ")
+            saved_any = True
+        except Exception as e:
+            print("[-] Error : %s" % e)
+    if not saved_any:
+        isDownloadError = 1
 
 def download_naver(url):
     global isDownloadError
@@ -339,7 +455,7 @@ def download_tistory(url):
         isDownloadError = 1;
         return;
 
-    #text_to_file(get_url_source_tistory( "https://harnenim.github.io/WinPNG/Viewer.html?url=" + url), "hello.html");
+    # if bool(p_harne.match(url)):
 
     try:
         # find all 'attach file link'
