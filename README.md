@@ -22,9 +22,9 @@
      ]'
    ```
 
-   * AnimeNo는 작품의 고유 번호입니다. ([애니시아 애니메이션 목록](https://anissia.net/anime)에서 작품을 선택하면 해당 작품의 url 끝 번호가 AnimeNo 입니다. )
-
-     * https://anissia.net/anime/{작품번호}
+   * AnimeNo는 작품의 고유 번호입니다.
+     * [애니시아 애니메이션 목록](https://anissia.net/anime)에서 작품을 선택하면 해당 작품의 url 끝 번호가 AnimeNo 입니다. 
+     * 예시: https://anissia.net/anime/{작품번호}
 
    * Anime는 생성될 폴더 이름입니다. **(선택 사항)**
 
