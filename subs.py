@@ -8,6 +8,7 @@ import ssl
 import gdrive
 import yaml
 import traceback
+import datetime
 import urllib.error
 from http import client
 from urllib import request
@@ -81,32 +82,95 @@ def requestAnimeSMI(AnimeNo):
 
     _requestAnimeSMI(AnimeNo,json_data)
 
-def requestMultipleAnimeSMI():
-    global smiDir,isDownloadError,AnimeName,AnimeNO
+CONFIG_FILE = 'anime.yml'
+_WINDOWS_RESERVED_NAMES = {"CON", "PRN", "AUX", "NUL"} \
+    | {"COM%d" % i for i in range(1, 10)} | {"LPT%d" % i for i in range(1, 10)}
 
-    with open('anime.yml', encoding='UTF8') as f:
-        global outpath
+# 폴더명으로 사용할 수 없는 문자를 제거
+def sanitize_folder_name(name):
+    name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', ' ', str(name))
+    name = re.sub(r'\s+', ' ', name).strip().rstrip('. ')
+    if name.upper() in _WINDOWS_RESERVED_NAMES:
+        name = "_" + name
+    return name
+
+# 작품 정보(제목 + 자막 목록) 요청
+def requestAnimeInfo(AnimeNo):
+    response = requests.get("https://api.anissia.net/anime/animeNo/" + str(AnimeNo))
+    datas = json.loads(response.text)
+    if datas.get("code") != "ok" or not datas.get("data"):
+        return None
+    return datas["data"]
+
+# anime.yml 저장 (anime_list는 기존과 같은 JSON 문자열 형식 유지)
+def save_config(download_path, animelist):
+    entries = []
+    for item in animelist:
+        lines = ['      %s:%s' % (json.dumps(key, ensure_ascii=False), json.dumps(value, ensure_ascii=False))
+                 for key, value in item.items()]
+        entries.append("    {\n" + ",\n".join(lines) + "\n    }")
+
+    anime_list_str = "[\n" + ",\n".join(entries) + ("\n" if entries else "") + "    ]"
+    anime_list_str = anime_list_str.replace("'", "''")  # YAML 작은따옴표 이스케이프
+
+    with open(CONFIG_FILE, 'w', encoding='UTF8') as f:
+        f.write("download_path: " + json.dumps(download_path, ensure_ascii=False) + "\n")
+        f.write("anime_list: '" + anime_list_str + "'\n")
+
+def requestMultipleAnimeSMI():
+    global smiDir,isDownloadError,AnimeName,AnimeNO,outpath
+
+    with open(CONFIG_FILE, encoding='UTF8') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
 
-        if config['download_path'] != "":
-            outpath = config['download_path'] + "/"
+    download_path = config.get('download_path') or ""
+    if download_path != "":
+        outpath = download_path + "/"
 
-        animelist = json.loads(config['anime_list'])
+    animelist = json.loads(config['anime_list'])
 
-        print("다운경로: "+outpath)
+    print("다운경로: "+outpath)
+    print("================================================================")
+
+    # 1. 작품 정보 조회 및 Anime(폴더명) 항목 채우기
+    targets = []
+    isConfigChanged = False
+
+    for i, k in enumerate(animelist):
+        AnimeNO = k['AnimeNo']
+
+        try:
+            info = requestAnimeInfo(AnimeNO)
+        except Exception as e:
+            print("[-] 작품 정보 요청 실패 (AnimeNo: %s) : %s" % (AnimeNO, e))
+            continue
+
+        if info is None:
+            print("[-] 작품 정보를 찾을 수 없습니다. (AnimeNo: %s)" % AnimeNO)
+            continue
+
+        name = str(k.get('Anime') or "").strip()
+
+        if name == "":
+            name = sanitize_folder_name(info.get('subject') or "")
+            if name == "":
+                name = str(AnimeNO)
+            # "Anime" 항목을 맨 앞에 두고 나머지 항목은 유지
+            animelist[i] = {"Anime": name, **{key: v for key, v in k.items() if key != 'Anime'}}
+            isConfigChanged = True
+            print("[+] 작품명 추가: %s => %s" % (AnimeNO, name))
+
+        targets.append((name, AnimeNO, info.get('captions') or []))
+
+    if isConfigChanged:
+        save_config(download_path, animelist)
+        print("[+] %s에 작품명이 저장되었습니다." % CONFIG_FILE)
         print("================================================================")
-        
-        for k in animelist:
-            AnimeName = k['Anime']
-            AnimeNO = k['AnimeNo']
 
-            response = requests.get("https://api.anissia.net/anime/caption/animeNo/" + str(AnimeNO))
-            #print(response.status_code)
-            datas = json.loads(response.text)
-            json_data = datas["data"]
+    # 2. 자막 다운로드
+    for AnimeName, AnimeNO, json_data in targets:
+        _requestAnimeSMI(AnimeNO,json_data)
 
-            _requestAnimeSMI(AnimeNO,json_data)
-            
 
 def _requestAnimeSMI(AnimeNo,json_data):
     global smiDir,isDownloadError
@@ -129,8 +193,11 @@ def _requestAnimeSMI(AnimeNo,json_data):
         print("> 업데이트: " + updDt)
         print("> 주소: " + website)
 
-        if os.path.isfile(outpath + smiDir + "finish.txt"):
+        finish_path = outpath + smiDir + "finish.txt"
+
+        if os.path.isfile(finish_path):
             print("[=] 이전에 생성된 finish.txt가 발견되어 과정이 스킵되었습니다.")
+            print_finish_detail(finish_path, updDt)
             print("================================================================")
             continue;
 
@@ -154,12 +221,92 @@ def _requestAnimeSMI(AnimeNo,json_data):
             download_website(website)
         
         if isDownloadError == 0:
-            text_to_file( json.dumps(k) , outpath + smiDir + "finish.txt");
+            text_to_file( build_finish_content(AnimeNo, k, website, finish_path) , finish_path);
             print("[+] finish.txt가 생성되었습니다.")
+            print_finish_detail(finish_path)
         else:
-            print("[-] finish.txt가 생성되지 않았습니다.")
+            print("[-] 다운로드 중 오류가 있어 finish.txt가 생성되지 않았습니다. (다음 실행 시 다시 시도합니다)")
+            print("    - 대상 폴더: " + os.path.normpath(outpath + smiDir))
 
         print("================================================================")
+
+
+# finish.txt 관련 상세 로그
+
+def _format_size(size):
+    for unit in ("B", "KB", "MB"):
+        if size < 1024 or unit == "MB":
+            return ("%d %s" % (size, unit)) if unit == "B" else ("%.1f %s" % (size, unit))
+        size /= 1024.0
+
+def _list_folder_files(folder):
+    """폴더 안의 파일(finish.txt 제외)을 (파일명, 바이트 크기) 목록으로 돌려준다."""
+    try:
+        names = sorted(f for f in os.listdir(folder)
+                       if f != "finish.txt" and os.path.isfile(os.path.join(folder, f)))
+    except OSError:
+        return []
+    files = []
+    for f in names:
+        try:
+            size = os.path.getsize(os.path.join(folder, f))
+        except OSError:
+            size = None
+        files.append((f, size))
+    return files
+
+def build_finish_content(AnimeNo, caption, website, finish_path):
+    """finish.txt에 저장할 내용(JSON)을 만든다.
+
+    스킵 시 비교에 쓰는 updDt는 기존과 같이 최상위에 둔다.
+    """
+    folder = os.path.dirname(finish_path)
+    files = _list_folder_files(folder)
+    info = {
+        "Anime": AnimeName,
+        "AnimeNo": str(AnimeNo),
+        "episode": caption.get('episode'),
+        "name": caption.get('name'),
+        "updDt": caption.get('updDt'),
+        "website": website,
+        "finishedAt": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "path": os.path.normpath(folder),
+        "fileCount": len(files),
+        "files": [{"name": f, "size": size, "sizeText": _format_size(size) if size is not None else "?"}
+                  for f, size in files],
+        "caption": caption,
+    }
+    return json.dumps(info, ensure_ascii=False, indent=2) + "\n"
+
+def print_finish_detail(finish_path, current_updDt=None):
+    """finish.txt 경로, 생성 시각, 폴더 안의 자막 파일 목록을 출력한다.
+
+    current_updDt가 주어지면(스킵 시) finish.txt에 기록된 업데이트 날짜와 비교한다.
+    """
+    folder = os.path.dirname(finish_path)
+    print("    - 경로: " + os.path.normpath(finish_path))
+
+    try:
+        mtime = datetime.datetime.fromtimestamp(os.path.getmtime(finish_path))
+        print("    - 생성 시각: " + mtime.strftime("%Y-%m-%d %H:%M:%S"))
+    except OSError:
+        pass
+
+    if current_updDt is not None:
+        try:
+            with open(finish_path, encoding="UTF-8") as f:
+                recorded_updDt = json.load(f).get("updDt")
+        except Exception:
+            recorded_updDt = None
+        if recorded_updDt:
+            print("    - 기록된 업데이트: " + str(recorded_updDt))
+            if str(recorded_updDt) != str(current_updDt):
+                print("    [!] 자막이 갱신되었습니다. (%s => %s) 다시 받으려면 finish.txt를 삭제하세요." % (recorded_updDt, current_updDt))
+
+    files = _list_folder_files(folder)
+    print("    - 폴더 내 파일: %d개" % len(files))
+    for f, size in files:
+        print("      * %s (%s)" % (f, _format_size(size) if size is not None else "?"))
 
 
 # 내부 로직 구현
