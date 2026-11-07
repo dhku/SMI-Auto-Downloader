@@ -97,6 +97,18 @@ def _get_session(proxy, use_cookies, user_agent, return_cookies_file=False):
         return sess
 
 
+def _save_cookies(sess, cookies_file):
+    # 쿠키 저장은 부가 기능이므로 실패해도 다운로드는 계속 진행합니다.
+    try:
+        os.makedirs(osp.dirname(cookies_file), exist_ok=True)
+        cookie_jar = MozillaCookieJar(cookies_file)
+        for cookie in sess.cookies:
+            cookie_jar.set_cookie(cookie)
+        cookie_jar.save()
+    except OSError as e:
+        print("Failed to save cookies:", e, file=sys.stderr)
+
+
 def get_file_name(url=None):
 
     proxy=None
@@ -190,10 +202,7 @@ def get_file_name(url=None):
             continue
 
         if use_cookies:
-            cookie_jar = MozillaCookieJar(cookies_file)
-            for cookie in sess.cookies:
-                cookie_jar.set_cookie(cookie)
-            cookie_jar.save()
+            _save_cookies(sess, cookies_file)
 
         if "Content-Disposition" in res.headers:
             # This is the file
@@ -364,10 +373,7 @@ def download(
             continue
 
         if use_cookies:
-            cookie_jar = MozillaCookieJar(cookies_file)
-            for cookie in sess.cookies:
-                cookie_jar.set_cookie(cookie)
-            cookie_jar.save()
+            _save_cookies(sess, cookies_file)
 
         if "Content-Disposition" in res.headers:
             # This is the file
