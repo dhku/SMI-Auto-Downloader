@@ -1,0 +1,17 @@
+# NAS 실행 예시. 왼쪽 경로를 NAS 의 실제 폴더로 바꾸세요.
+# 실행 1회마다 target 폴더를 처리하고 종료합니다. (작업 스케줄러 등으로 주기 실행)
+#   docker compose run --rm smi-auto-downloader
+services:
+  smi-auto-downloader:
+    build: .
+    image: smi-auto-downloader:latest
+    platform: linux/amd64
+    container_name: smi-auto-downloader
+    environment:
+      - PUID=1026        # NAS 사용자 id  (id 명령으로 확인)
+      - PGID=100         # NAS 그룹 id
+      - TZ=Asia/Seoul
+    volumes:
+      - /volume1/docker/SMI-Auto-Downloader:/app        # anime.yml
+      - /volume1/docker/SMI-Auto-Downloader/output:/app/output
+    restart: "no"

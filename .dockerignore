@@ -1,0 +1,9 @@
+.git
+.claude
+**/__pycache__
+build
+dist
+img
+output
+*.spec
+anime.yml
