@@ -97,7 +97,7 @@
 
 ## NAS를 이용한 다운로더 사용방법
 
-#### **Docker를 이용한 방법 (권장)**
+#### 1. **Docker를 이용한 방법 (권장)**
 
 실행 환경 : Synology / Linux / Windows
 
@@ -180,7 +180,7 @@ Python이나 패키지를 직접 설치하지 않고 Docker 컨테이너로 실�
    */30 * * * * cd /home/user/SMI-Auto-Downloader && docker compose run --rm smi-auto-downloader # 예시) 30분 간격으로 실행...
    ```
 
-#### **로컬에서 실행 (Windows)**
+#### 2. **로컬에서 실행 (Windows)**
 
 실행 환경 : Windows 10 / 11
 
