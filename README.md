@@ -124,12 +124,12 @@ Docker 없이 Windows PC에서 직접 실행하는 방법입니다. 실행 파�
    2. **anime.yml**에 받을 작품을 설정합니다.
 
       ```yaml
-      download_path: "D:/Anime/Subtitles"
+      download_path: "./output"
       anime_list: '[
           {
             "AnimeNo":"2593"
           }
-          ]'
+        ]'
       ```
 
    3. **start.bat**을 더블클릭하여 실행합니다. 실행이 끝나면 창이 멈춰 있으므로 결과를 확인한 뒤 아무 키나 눌러 닫습니다.
@@ -211,9 +211,15 @@ Python이나 패키지를 직접 설치하지 않고 Docker 컨테이너로 실�
    ```
 
    * `PUID`, `PGID` : 다운로드한 파일의 소유자가 됩니다. SSH에서 `id` 명령으로 확인한 NAS 사용자의 `uid`, `gid` 값을 입력합니다.
-   * `volumes` : 왼쪽은 NAS의 실제 경로, 오른쪽은 컨테이너 내부 경로입니다. 자막을 다른 폴더에 받고 싶다면 두 번째 줄의 **왼쪽 경로만** 바꿉니다. (예: `/volume1/Anime/Downloads:/app/output`)
+   * `volumes` : 왼쪽은 NAS의 실제 경로, 오른쪽은 컨테이너 내부 경로입니다. </br>자막을 다른 폴더에 받고 싶다면 두 번째 줄의 **왼쪽 경로만** 바꿉니다. (예: `/volume1/Anime/Downloads:/app/output`)
 
-3. **anime.yml**의 `download_path`는 **컨테이너 내부 경로** 기준이므로 `./output`으로 설정합니다.
+     * 만일 자막을 다른 폴더에 받을시 해당 폴더의 읽기와 폴더 진입 권한을 부여해야합니다.
+
+       ```
+       sudo chmod u+rwx /volume1/Anime/Downloads # 애니메이션 동영상 폴더
+       ```
+
+3. **anime.yml**의 `download_path`는 **컨테이너 내부 경로** 기준이므로 `./output`으로 설정합니다. (기본으로 설정되어 있습니다)
 
    ```yaml
    download_path: "./output"
@@ -239,9 +245,8 @@ Python이나 패키지를 직접 설치하지 않고 Docker 컨테이너로 실�
    docker compose run --rm smi-auto-downloader
    ```
 
-   * 코드는 이미지 안에 포함되므로, 폴더의 `subs.py`를 새 버전으로 바꾼 뒤에는 반드시 `docker compose build`를 다시 실행해야 반영됩니다.
    * DSM 7.2 미만 등 `docker compose` 명령이 없는 환경에서는 `docker-compose`를 사용합니다.
-
+   
 5. 주기적으로 실행하려면 시놀로지 **작업 스케줄러**에서 **생성 -> 예약된 작업 -> 사용자 정의 스크립트**를 만들고, 사용자를 **root**로 선택한 뒤 아래 명령을 추가합니다.
 
    ```bash
